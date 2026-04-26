@@ -1,0 +1,14 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.5
+    container_name: keycloak-totp-local
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./target/keycloak-totp-admin-api-1.0.0-SNAPSHOT.jar:/opt/keycloak/providers/keycloak-totp-admin-api-1.0.0-SNAPSHOT.jar:ro
+    command:
+      - start-dev
+      - --auto-build
