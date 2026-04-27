@@ -1,4 +1,4 @@
-- [ ] Deliver a first version with all endpoints working
+- [ ] Deliver a first version with all endpoints working and ship it under v1.0.0
 
 - [ ] Create a compatibility matrix tested by Github Actions
 
@@ -14,3 +14,5 @@
     - [ ] Consumes, Produces, QueryParam
     - [ ] @QueryParam to replace `dto` subpackage
     - [ ] Microprofile OpenAPI schema
+
+- [ ] Migrate to Gradle
