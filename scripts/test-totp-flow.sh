@@ -177,7 +177,7 @@ fi
 
 echo "Step 7/8: removing TOTP credential"
 REMOVE_BODY="{\"deviceName\":\"$DEVICE_NAME\"}"
-readarray -t REMOVE_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/remove-totp/$TARGET_USER_ID" "$ACCESS_TOKEN" "$REMOVE_BODY")
+readarray -t REMOVE_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/remove/$TARGET_USER_ID" "$ACCESS_TOKEN" "$REMOVE_BODY")
 REM_CODE="${REMOVE_RESULT[0]}"
 REM_BODY="${REMOVE_RESULT[1]}"
 if [[ "$REM_CODE" != "200" ]]; then

@@ -73,7 +73,7 @@ Validates a user-supplied TOTP code.
 
 ### 4. ✅ Remove TOTP Code
 
-**POST** `/remove-totp`
+**POST** `/remove`
 Remove User TOTP code by deviceName.
 
 **Request Body**:
