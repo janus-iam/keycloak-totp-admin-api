@@ -107,7 +107,7 @@ public class TotpAdminResource {
     }
 
     @GET
-    @Path("totp/get-credentials/{user-id}")
+    @Path("totp/list/{user-id}")
     public TotpCredentialsResponse getCredentials(@PathParam("user-id") String userId) {
         UserModel user = requireUser(realm, userId);
 

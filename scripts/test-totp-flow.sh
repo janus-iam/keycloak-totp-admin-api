@@ -160,7 +160,7 @@ if [[ "$REG_CODE" != "200" ]]; then
 fi
 
 echo "Step 6/8: verifying credential appears in list"
-readarray -t LIST_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/get-totp-credentials/$TARGET_USER_ID" "$ACCESS_TOKEN")
+readarray -t LIST_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/list/$TARGET_USER_ID" "$ACCESS_TOKEN")
 LIST_CODE="${LIST_RESULT[0]}"
 LIST_BODY="${LIST_RESULT[1]}"
 if [[ "$LIST_CODE" != "200" ]]; then
@@ -187,7 +187,7 @@ if [[ "$REM_CODE" != "200" ]]; then
 fi
 
 echo "Step 8/8: verifying credential removal"
-readarray -t LIST_AFTER_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/get-totp-credentials/$TARGET_USER_ID" "$ACCESS_TOKEN")
+readarray -t LIST_AFTER_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/list/$TARGET_USER_ID" "$ACCESS_TOKEN")
 LIST_AFTER_CODE="${LIST_AFTER_RESULT[0]}"
 LIST_AFTER_BODY="${LIST_AFTER_RESULT[1]}"
 if [[ "$LIST_AFTER_CODE" != "200" ]]; then

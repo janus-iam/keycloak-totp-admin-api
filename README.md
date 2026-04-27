@@ -11,12 +11,8 @@ All endpoints are available under:
 - `GET /generate/{user-id}`
 - `POST /register/{user-id}`
 - `POST /verify/{user-id}`
-- `POST /remove-totp/{user-id}`
-- `GET /get-totp-credentials/{user-id}`
-
-## Authorization
-
-Requests must include an admin bearer token with `realm-management` client role `manage-users`.
+- `POST /remove/{user-id}`
+- `GET /list/{user-id}`
 
 ## Build
 
@@ -41,16 +37,12 @@ mvn clean package
 2. Start Keycloak locally:
 
 ```bash
-docker compose up -d
+docker compose up --watch
 ```
 
-3. Check logs (look for provider loading and startup success):
+> the `--watch` should restart the container when the `.jar` changes but instead it makes the container crash, so you will have to restart it by hand !
 
-```bash
-docker compose logs -f keycloak
-```
-
-4. Open Keycloak:
+3. Open Keycloak:
 
 `http://localhost:8080`
 
