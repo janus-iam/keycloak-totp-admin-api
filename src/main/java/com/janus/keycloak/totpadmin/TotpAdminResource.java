@@ -23,35 +23,26 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel;
-import org.keycloak.representations.AccessToken;
-import org.keycloak.services.managers.AppAuthManager;
-import org.keycloak.services.managers.AuthenticationManager;
-
+import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+import lombok.RequiredArgsConstructor;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-@Produces(MediaType.APPLICATION_JSON)
-@Path("/totp")
+@RequiredArgsConstructor
 public class TotpAdminResource {
 
-    private static final String REALM_MANAGEMENT_CLIENT = "realm-management";
-    private static final String REQUIRED_ADMIN_ROLE = "manage-users";
-
-    private final KeycloakSession session;
+	private final KeycloakSession session;
+	private final RealmModel realm;
+	private final AdminPermissionEvaluator auth;
 
     @Context
     private HttpHeaders headers;
 
-    public TotpAdminResource(KeycloakSession session) {
-        this.session = session;
-    }
-
     @GET
-    @Path("/generate/{user-id}")
+    @Path("totp/generate/{user-id}")
+    @Produces(MediaType.APPLICATION_JSON)
     public GenerateTotpResponse generate(@PathParam("user-id") String userId) {
-        RealmModel realm = requireRealm();
-        requireManageUsersRole(realm);
         UserModel user = requireUser(realm, userId);
         OTPPolicy policy = realm.getOTPPolicy();
 
@@ -62,17 +53,15 @@ public class TotpAdminResource {
     }
 
     @POST
-    @Path("/register/{user-id}")
+    @Path("totp/register/{user-id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response register(@PathParam("user-id") String userId, RegisterTotpRequest request) {
-        RealmModel realm = requireRealm();
-        requireManageUsersRole(realm);
         UserModel user = requireUser(realm, userId);
         validateRegisterRequest(request);
 
         String secret = TotpUtils.normalizeSecret(request.getEncodedSecret());
         if (!TotpUtils.isValidInitialCode(request.getInitialCode(), secret, realm.getOTPPolicy())) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "Invalid initial TOTP code");
+            throw new ApiException(Response.Status.BAD_REQUEST, "Invalid initial TOTP " + request.getInitialCode() + " for the provided secret" + request.getEncodedSecret());
         }
 
         Optional<CredentialModel> existing = findByDeviceName(user, request.getDeviceName());
@@ -87,11 +76,9 @@ public class TotpAdminResource {
     }
 
     @POST
-    @Path("/verify/{user-id}")
+    @Path("totp/verify/{user-id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response verify(@PathParam("user-id") String userId, VerifyTotpRequest request) {
-        RealmModel realm = requireRealm();
-        requireManageUsersRole(realm);
         UserModel user = requireUser(realm, userId);
         validateVerifyRequest(request);
 
@@ -105,11 +92,9 @@ public class TotpAdminResource {
     }
 
     @POST
-    @Path("/remove-totp/{user-id}")
+    @Path("totp/remove/{user-id}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response removeTotp(@PathParam("user-id") String userId, RemoveTotpRequest request) {
-        RealmModel realm = requireRealm();
-        requireManageUsersRole(realm);
         UserModel user = requireUser(realm, userId);
         if (request == null || isBlank(request.getDeviceName())) {
             throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
@@ -122,10 +107,8 @@ public class TotpAdminResource {
     }
 
     @GET
-    @Path("/get-totp-credentials/{user-id}")
+    @Path("totp/get-credentials/{user-id}")
     public TotpCredentialsResponse getCredentials(@PathParam("user-id") String userId) {
-        RealmModel realm = requireRealm();
-        requireManageUsersRole(realm);
         UserModel user = requireUser(realm, userId);
 
         List<String> deviceNames = user.credentialManager()
@@ -133,14 +116,6 @@ public class TotpAdminResource {
             .map(this::resolveDeviceName)
             .collect(Collectors.toList());
         return new TotpCredentialsResponse(deviceNames);
-    }
-
-    private RealmModel requireRealm() {
-        RealmModel realm = session.getContext().getRealm();
-        if (realm == null) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "Realm context is missing");
-        }
-        return realm;
     }
 
     private UserModel requireUser(RealmModel realm, String userId) {
@@ -187,23 +162,6 @@ public class TotpAdminResource {
 
     private String resolveDeviceName(CredentialModel credential) {
         return isBlank(credential.getUserLabel()) ? "Unnamed device" : credential.getUserLabel();
-    }
-
-    private void requireManageUsersRole(RealmModel realm) {
-        AuthenticationManager.AuthResult authResult = new AppAuthManager.BearerTokenAuthenticator(session)
-            .setRealm(realm)
-            .setConnection(session.getContext().getConnection())
-            .setHeaders(headers)
-            .authenticate();
-        if (authResult == null || authResult.getToken() == null) {
-            throw new ApiException(Response.Status.FORBIDDEN, "Admin bearer token is required");
-        }
-
-        AccessToken token = authResult.getToken();
-        AccessToken.Access resourceAccess = token.getResourceAccess(REALM_MANAGEMENT_CLIENT);
-        if (resourceAccess == null || !resourceAccess.isUserInRole(REQUIRED_ADMIN_ROLE)) {
-            throw new ApiException(Response.Status.FORBIDDEN, "Missing realm-management/manage-users role");
-        }
     }
 
     private boolean isBlank(String value) {
