@@ -66,7 +66,7 @@ public final class TotpUtils {
             policy.getLookAheadWindow()
         );
         try {
-            return validator.validateTOTP(code, encodedSecret.getBytes(StandardCharsets.UTF_8));
+            return validator.validateTOTP(code, decodeBase32Secret(encodedSecret));
         } catch (Exception ex) {
             return false;
         }
@@ -83,7 +83,7 @@ public final class TotpUtils {
             policy.getLookAheadWindow()
         );
         try {
-            return validator.validateTOTP(code, encodedSecret.getBytes(StandardCharsets.UTF_8));
+            return validator.validateTOTP(code, decodeBase32Secret(encodedSecret));
         } catch (Exception ex) {
             return false;
         }
@@ -95,5 +95,12 @@ public final class TotpUtils {
 
     private static String urlEncode(String value) {
         return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private static byte[] decodeBase32Secret(String encodedSecret) {
+        String normalizedSecret = normalizeSecret(encodedSecret);
+        int paddingLength = (8 - normalizedSecret.length() % 8) % 8;
+        String paddedSecret = normalizedSecret + "=".repeat(paddingLength);
+        return new Base32().decode(paddedSecret);
     }
 }

@@ -23,6 +23,7 @@ import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel;
+import org.keycloak.models.credential.OTPCredentialModel.SecretEncoding;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -61,7 +62,7 @@ public class TotpAdminResource {
 
         String secret = TotpUtils.normalizeSecret(request.getEncodedSecret());
         if (!TotpUtils.isValidInitialCode(request.getInitialCode(), secret, realm.getOTPPolicy())) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "Invalid initial TOTP " + request.getInitialCode() + " for the provided secret" + request.getEncodedSecret());
+            throw new ApiException(Response.Status.BAD_REQUEST, "Invalid initial TOTP " + request.getInitialCode() + " for the provided secret " + request.getEncodedSecret());
         }
 
         Optional<CredentialModel> existing = findByDeviceName(user, request.getDeviceName());
@@ -70,7 +71,14 @@ public class TotpAdminResource {
         }
         existing.ifPresent(credentialModel -> user.credentialManager().removeStoredCredentialById(credentialModel.getId()));
 
-        OTPCredentialModel otpCredential = OTPCredentialModel.createFromPolicy(realm, secret, request.getDeviceName());
+        OTPCredentialModel otpCredential = OTPCredentialModel.createTOTP(
+            secret,
+            realm.getOTPPolicy().getDigits(),
+            realm.getOTPPolicy().getPeriod(),
+            realm.getOTPPolicy().getAlgorithm(),
+            SecretEncoding.BASE32.name()
+        );
+        otpCredential.setUserLabel(request.getDeviceName());
         user.credentialManager().createStoredCredential(otpCredential);
         return Response.ok(new MessageResponse("OTP credential registered")).build();
     }
