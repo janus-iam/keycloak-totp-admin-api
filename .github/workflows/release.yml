@@ -1,0 +1,46 @@
+name: Release JAR
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Set version from tag
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "TAG=${TAG}" >> "${GITHUB_ENV}"
+          echo "VERSION=${VERSION}" >> "${GITHUB_ENV}"
+
+      - name: Apply version and build
+        run: |
+          mvn -B org.codehaus.mojo:versions-maven-plugin:2.17.1:set \
+            -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
+          mvn -B -DskipTests=false clean package
+
+      - name: Create GitHub release and upload JARs
+        uses: softprops/action-gh-release@v3
+        if: github.ref_type == 'tag'
+        with:
+          tag_name: ${{ env.TAG }}
+          name: ${{ env.TAG }}
+          generate_release_notes: true
+          files: target/*.jar
