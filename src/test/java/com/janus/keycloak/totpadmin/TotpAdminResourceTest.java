@@ -17,6 +17,7 @@ import org.keycloak.models.UserProvider;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.utils.TimeBasedOTP;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+import org.keycloak.services.resources.admin.permissions.UserPermissionEvaluator;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -45,6 +46,8 @@ class TotpAdminResourceTest {
     @Mock
     private AdminPermissionEvaluator auth;
     @Mock
+    private UserPermissionEvaluator userPermissions;
+    @Mock
     private UserModel user;
     @Mock
     private UserProvider userProvider;
@@ -60,6 +63,7 @@ class TotpAdminResourceTest {
         resource = new TotpAdminResource(session, realm, auth);
         when(session.users()).thenReturn(userProvider);
         when(userProvider.getUserById(realm, USER_ID)).thenReturn(user);
+        lenient().when(auth.users()).thenReturn(userPermissions);
         lenient().when(user.credentialManager()).thenReturn(credentialManager);
         lenient().when(realm.getOTPPolicy()).thenReturn(otpPolicy);
         lenient().when(otpPolicy.getAlgorithm()).thenReturn("HmacSHA1");

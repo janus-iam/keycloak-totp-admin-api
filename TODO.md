@@ -8,13 +8,13 @@
 
 - [ ] Implement tests with https://github.com/dasniko/testcontainers-keycloak ?
 
-- [ ] Secure endpoints using `AdminPermissionEvaluator`  with `auth.realm().requireViewRequiredActions();`  or something like this
+- [x] Secure endpoints using `AdminPermissionEvaluator` (`users().requireView` / `users().requireManage`, aligned with Keycloak `UserResource` credentials)
 
 - [x] Add annotations like Keycloak official repo with :
     - [x] Consumes, Produces, QueryParam
     - [x] @QueryParam to replace `dto` subpackage ?
     - [x] Microprofile OpenAPI schema
 
-- [ ] Add more deep unit tests
+- [x] Add more deep unit tests
 
 - [ ] Migrate to Gradle

@@ -27,6 +27,7 @@ import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel.SecretEncoding;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+import org.keycloak.services.resources.admin.permissions.UserPermissionEvaluator;
 
 import com.janus.keycloak.totpadmin.models.GenerateTotpResponse;
 import com.janus.keycloak.totpadmin.models.MessageResponse;
@@ -46,8 +47,7 @@ public class TotpAdminResource {
 
     private final KeycloakSession session;
     private final RealmModel realm;
-    @SuppressWarnings("unused")
-	private final AdminPermissionEvaluator auth;
+    private final AdminPermissionEvaluator auth;
 
     @Context
     private HttpHeaders headers;
@@ -60,11 +60,12 @@ public class TotpAdminResource {
             responseCode = "200",
             description = "Secret and base64 PNG QR code",
             content = @Content(schema = @Schema(implementation = GenerateTotpResponse.class))),
+        @APIResponse(responseCode = "403", description = "Missing permission to manage this user"),
         @APIResponse(responseCode = "404", description = "User not found")
     })
     public GenerateTotpResponse generate(
         @Parameter(description = "User id", required = true) @PathParam("user-id") String userId) {
-        UserModel user = requireUser(realm, userId);
+        UserModel user = requireUserWithManage(realm, userId);
         OTPPolicy policy = realm.getOTPPolicy();
 
         String secret = TotpUtils.generateSecret();
@@ -84,12 +85,13 @@ public class TotpAdminResource {
             content = @Content(schema = @Schema(implementation = MessageResponse.class))),
         @APIResponse(responseCode = "400", description = "Invalid request or initial code"),
         @APIResponse(responseCode = "404", description = "User not found"),
+        @APIResponse(responseCode = "403", description = "Missing permission to manage this user"),
         @APIResponse(responseCode = "409", description = "Device name already exists")
     })
     public Response register(
         @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
         RegisterTotpRequest request) {
-        UserModel user = requireUser(realm, userId);
+        UserModel user = requireUserWithManage(realm, userId);
         validateRegisterRequest(request);
 
         String secret = TotpUtils.normalizeSecret(request.getEncodedSecret());
@@ -124,13 +126,14 @@ public class TotpAdminResource {
             description = "Code is valid",
             content = @Content(schema = @Schema(implementation = MessageResponse.class))),
         @APIResponse(responseCode = "400", description = "Invalid code or missing parameters"),
+        @APIResponse(responseCode = "403", description = "Missing permission to view this user"),
         @APIResponse(responseCode = "404", description = "User or credential not found")
     })
     public Response verify(
         @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
         @Parameter(description = "Credential device label", required = true) @QueryParam("deviceName") String deviceName,
         @Parameter(description = "Current TOTP code", required = true) @QueryParam("code") String code) {
-        UserModel user = requireUser(realm, userId);
+        UserModel user = requireUserWithView(realm, userId);
         if (isBlank(deviceName)) {
             throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
         }
@@ -157,12 +160,13 @@ public class TotpAdminResource {
             description = "Credential removed",
             content = @Content(schema = @Schema(implementation = MessageResponse.class))),
         @APIResponse(responseCode = "400", description = "Missing deviceName"),
+        @APIResponse(responseCode = "403", description = "Missing permission to manage this user"),
         @APIResponse(responseCode = "404", description = "User or credential not found")
     })
     public Response removeTotp(
         @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
         @Parameter(description = "Credential device label", required = true) @QueryParam("deviceName") String deviceName) {
-        UserModel user = requireUser(realm, userId);
+        UserModel user = requireUserWithManage(realm, userId);
         if (isBlank(deviceName)) {
             throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
         }
@@ -181,11 +185,12 @@ public class TotpAdminResource {
             responseCode = "200",
             description = "Device labels",
             content = @Content(schema = @Schema(implementation = TotpCredentialsResponse.class))),
+        @APIResponse(responseCode = "403", description = "Missing permission to view this user"),
         @APIResponse(responseCode = "404", description = "User not found")
     })
     public TotpCredentialsResponse getCredentials(
         @Parameter(description = "User id", required = true) @PathParam("user-id") String userId) {
-        UserModel user = requireUser(realm, userId);
+        UserModel user = requireUserWithView(realm, userId);
 
         List<String> deviceNames = user.credentialManager()
             .getStoredCredentialsByTypeStream(OTPCredentialModel.TYPE)
@@ -200,6 +205,28 @@ public class TotpAdminResource {
             throw new ApiException(Response.Status.NOT_FOUND, "User not found");
         }
         return user;
+    }
+
+    /**
+     * Same checks as {@code UserResource#credentials()} — list / non-mutating credential reads.
+     */
+    private UserModel requireUserWithView(RealmModel realm, String userId) {
+        UserModel user = requireUser(realm, userId);
+        users().requireView(user);
+        return user;
+    }
+
+    /**
+     * Same checks as {@code UserResource#removeCredential} / credential writes — enrollment and removal.
+     */
+    private UserModel requireUserWithManage(RealmModel realm, String userId) {
+        UserModel user = requireUser(realm, userId);
+        users().requireManage(user);
+        return user;
+    }
+
+    private UserPermissionEvaluator users() {
+        return auth.users();
     }
 
     private void validateRegisterRequest(RegisterTotpRequest request) {
