@@ -114,6 +114,7 @@ public class TotpAdminResource {
         );
         otpCredential.setUserLabel(request.getDeviceName());
         user.credentialManager().createStoredCredential(otpCredential);
+        user.removeRequiredAction(UserModel.RequiredAction.CONFIGURE_TOTP.name());
         return Response.ok(new MessageResponse("OTP credential registered")).build();
     }
 

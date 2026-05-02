@@ -28,6 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -169,6 +171,7 @@ class TotpAdminResourceTest {
         verify(credentialManager).getStoredCredentialsByTypeStream(OTPCredentialModel.TYPE);
         verify(credentialManager, never()).removeStoredCredentialById(any());
         verify(credentialManager, never()).createStoredCredential(any());
+        verify(user, never()).removeRequiredAction(anyString());
     }
 
     @Test
@@ -193,6 +196,7 @@ class TotpAdminResourceTest {
         assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
         verify(credentialManager).removeStoredCredentialById("old-cred-id");
         verify(credentialManager).createStoredCredential(any(OTPCredentialModel.class));
+        verify(user).removeRequiredAction(eq(UserModel.RequiredAction.CONFIGURE_TOTP.name()));
     }
 
     private static void assertBadRequest(ApiException ex, String expectedMessage) {
