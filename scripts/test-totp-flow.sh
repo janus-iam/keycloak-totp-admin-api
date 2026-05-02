@@ -94,7 +94,7 @@ http_json() {
   echo "$resp"
 }
 
-echo "Step 1/8: requesting admin token"
+echo "Step 1/9: requesting admin token"
 TOKEN_RESPONSE="$(curl -sS -X POST "$BASE_URL/realms/$REALM/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   --data-urlencode "grant_type=password" \
@@ -107,7 +107,7 @@ if [[ -z "$ACCESS_TOKEN" ]]; then
   exit 1
 fi
 
-echo "Step 2/8: resolving target user"
+echo "Step 2/9: resolving target user"
 if [[ -z "$TARGET_USER_ID" ]]; then
   USERS_RESPONSE="$(curl -sS -X GET "$BASE_URL/admin/realms/$REALM/users?username=$TARGET_USERNAME&exact=true" \
     -H "Authorization: Bearer $ACCESS_TOKEN")"
@@ -121,7 +121,7 @@ fi
 
 echo "Using target user id: $TARGET_USER_ID"
 
-echo "Step 2b/8: reading realm OTP policy"
+echo "Step 2b/9: reading realm OTP policy"
 fetch_realm_otp_policy
 if [[ "$OTP_TYPE" != "totp" ]]; then
   echo "Realm OTP policy type is '$OTP_TYPE', but this flow expects TOTP" >&2
@@ -129,7 +129,7 @@ if [[ "$OTP_TYPE" != "totp" ]]; then
 fi
 echo "Using OTP policy: algorithm=$OTP_ALGORITHM digits=$OTP_DIGITS period=$OTP_PERIOD"
 
-echo "Step 3/8: generating TOTP secret"
+echo "Step 3/9: generating TOTP secret"
 readarray -t GENERATE_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/generate/$TARGET_USER_ID" "$ACCESS_TOKEN")
 GEN_CODE="${GENERATE_RESULT[0]}"
 GEN_BODY="${GENERATE_RESULT[1]}"
@@ -145,10 +145,10 @@ if [[ -z "$ENCODED_SECRET" ]]; then
   exit 1
 fi
 
-echo "Step 4/8: computing initial TOTP code"
+echo "Step 4/9: computing initial TOTP code"
 INITIAL_CODE="$(generate_totp_code "$ENCODED_SECRET" "$OTP_ALGORITHM" "$OTP_DIGITS" "$OTP_PERIOD")"
 
-echo "Step 5/8: registering TOTP credential"
+echo "Step 5/9: registering TOTP credential"
 REGISTER_BODY="{\"deviceName\":\"$DEVICE_NAME\",\"encodedSecret\":\"$ENCODED_SECRET\",\"initialCode\":\"$INITIAL_CODE\",\"overwrite\":true}"
 readarray -t REGISTER_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/register/$TARGET_USER_ID" "$ACCESS_TOKEN" "$REGISTER_BODY")
 REG_CODE="${REGISTER_RESULT[0]}"
@@ -159,7 +159,19 @@ if [[ "$REG_CODE" != "200" ]]; then
   exit 1
 fi
 
-echo "Step 6/8: verifying credential appears in list"
+echo "Step 6/9: verifying TOTP code (query parameters)"
+VERIFY_CODE="$(generate_totp_code "$ENCODED_SECRET" "$OTP_ALGORITHM" "$OTP_DIGITS" "$OTP_PERIOD")"
+VERIFY_Q="deviceName=$(jq -rn --arg d "$DEVICE_NAME" '$d|@uri')&code=$(jq -rn --arg c "$VERIFY_CODE" '$c|@uri')"
+readarray -t VERIFY_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/verify/$TARGET_USER_ID?$VERIFY_Q" "$ACCESS_TOKEN")
+VER_CODE="${VERIFY_RESULT[0]}"
+VER_BODY="${VERIFY_RESULT[1]}"
+if [[ "$VER_CODE" != "200" ]]; then
+  echo "Verify endpoint failed with status $VER_CODE" >&2
+  echo "$VER_BODY" >&2
+  exit 1
+fi
+
+echo "Step 7/9: verifying credential appears in list"
 readarray -t LIST_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/list/$TARGET_USER_ID" "$ACCESS_TOKEN")
 LIST_CODE="${LIST_RESULT[0]}"
 LIST_BODY="${LIST_RESULT[1]}"
@@ -175,9 +187,9 @@ if [[ "$HAS_DEVICE" != "true" ]]; then
   exit 1
 fi
 
-echo "Step 7/8: removing TOTP credential"
-REMOVE_BODY="{\"deviceName\":\"$DEVICE_NAME\"}"
-readarray -t REMOVE_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/remove/$TARGET_USER_ID" "$ACCESS_TOKEN" "$REMOVE_BODY")
+echo "Step 8/9: removing TOTP credential"
+REMOVE_Q="deviceName=$(jq -rn --arg d "$DEVICE_NAME" '$d|@uri')"
+readarray -t REMOVE_RESULT < <(http_json POST "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/remove/$TARGET_USER_ID?$REMOVE_Q" "$ACCESS_TOKEN")
 REM_CODE="${REMOVE_RESULT[0]}"
 REM_BODY="${REMOVE_RESULT[1]}"
 if [[ "$REM_CODE" != "200" ]]; then
@@ -186,7 +198,7 @@ if [[ "$REM_CODE" != "200" ]]; then
   exit 1
 fi
 
-echo "Step 8/8: verifying credential removal"
+echo "Step 9/9: verifying credential removal"
 readarray -t LIST_AFTER_RESULT < <(http_json GET "$BASE_URL/admin/realms/$REALM/totp-admin-api/totp/list/$TARGET_USER_ID" "$ACCESS_TOKEN")
 LIST_AFTER_CODE="${LIST_AFTER_RESULT[0]}"
 LIST_AFTER_BODY="${LIST_AFTER_RESULT[1]}"

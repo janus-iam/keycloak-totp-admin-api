@@ -1,21 +1,23 @@
 package com.janus.keycloak.totpadmin;
 
-import com.janus.keycloak.totpadmin.dto.GenerateTotpResponse;
-import com.janus.keycloak.totpadmin.dto.MessageResponse;
-import com.janus.keycloak.totpadmin.dto.RegisterTotpRequest;
-import com.janus.keycloak.totpadmin.dto.RemoveTotpRequest;
-import com.janus.keycloak.totpadmin.dto.TotpCredentialsResponse;
-import com.janus.keycloak.totpadmin.dto.VerifyTotpRequest;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.media.Content;
+import org.eclipse.microprofile.openapi.annotations.media.Schema;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.eclipse.microprofile.openapi.annotations.responses.APIResponses;
+import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 import org.keycloak.credential.CredentialModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.OTPPolicy;
@@ -25,16 +27,26 @@ import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel.SecretEncoding;
 import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
+
+import com.janus.keycloak.totpadmin.models.GenerateTotpResponse;
+import com.janus.keycloak.totpadmin.models.MessageResponse;
+import com.janus.keycloak.totpadmin.models.RegisterTotpRequest;
+import com.janus.keycloak.totpadmin.models.TotpCredentialsResponse;
+
 import lombok.RequiredArgsConstructor;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Tag(name = "TOTP admin", description = "Register, verify, list, and remove TOTP credentials for a realm user")
+@Produces(MediaType.APPLICATION_JSON)
 @RequiredArgsConstructor
 public class TotpAdminResource {
 
-	private final KeycloakSession session;
-	private final RealmModel realm;
+    private final KeycloakSession session;
+    private final RealmModel realm;
+    @SuppressWarnings("unused")
 	private final AdminPermissionEvaluator auth;
 
     @Context
@@ -42,8 +54,16 @@ public class TotpAdminResource {
 
     @GET
     @Path("totp/generate/{user-id}")
-    @Produces(MediaType.APPLICATION_JSON)
-    public GenerateTotpResponse generate(@PathParam("user-id") String userId) {
+    @Operation(summary = "Generate a new TOTP secret and QR payload")
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Secret and base64 PNG QR code",
+            content = @Content(schema = @Schema(implementation = GenerateTotpResponse.class))),
+        @APIResponse(responseCode = "404", description = "User not found")
+    })
+    public GenerateTotpResponse generate(
+        @Parameter(description = "User id", required = true) @PathParam("user-id") String userId) {
         UserModel user = requireUser(realm, userId);
         OTPPolicy policy = realm.getOTPPolicy();
 
@@ -56,7 +76,19 @@ public class TotpAdminResource {
     @POST
     @Path("totp/register/{user-id}")
     @Consumes(MediaType.APPLICATION_JSON)
-    public Response register(@PathParam("user-id") String userId, RegisterTotpRequest request) {
+    @Operation(summary = "Register a TOTP credential after the user confirms an initial code")
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Credential stored",
+            content = @Content(schema = @Schema(implementation = MessageResponse.class))),
+        @APIResponse(responseCode = "400", description = "Invalid request or initial code"),
+        @APIResponse(responseCode = "404", description = "User not found"),
+        @APIResponse(responseCode = "409", description = "Device name already exists")
+    })
+    public Response register(
+        @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
+        RegisterTotpRequest request) {
         UserModel user = requireUser(realm, userId);
         validateRegisterRequest(request);
 
@@ -85,15 +117,32 @@ public class TotpAdminResource {
 
     @POST
     @Path("totp/verify/{user-id}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response verify(@PathParam("user-id") String userId, VerifyTotpRequest request) {
+    @Operation(summary = "Verify a TOTP code against a stored credential")
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Code is valid",
+            content = @Content(schema = @Schema(implementation = MessageResponse.class))),
+        @APIResponse(responseCode = "400", description = "Invalid code or missing parameters"),
+        @APIResponse(responseCode = "404", description = "User or credential not found")
+    })
+    public Response verify(
+        @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
+        @Parameter(description = "Credential device label", required = true) @QueryParam("deviceName") String deviceName,
+        @Parameter(description = "Current TOTP code", required = true) @QueryParam("code") String code) {
         UserModel user = requireUser(realm, userId);
-        validateVerifyRequest(request);
+        if (isBlank(deviceName)) {
+            throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
+        }
+        if (isBlank(code)) {
+            throw new ApiException(Response.Status.BAD_REQUEST, "code is required");
+        }
 
-        CredentialModel credential = findByDeviceName(user, request.getDeviceName())
+        CredentialModel credential = findByDeviceName(user, deviceName)
             .orElseThrow(() -> new ApiException(Response.Status.NOT_FOUND, "TOTP credential not found for deviceName"));
 
-        if (!user.credentialManager().isValid(UserCredentialModel.otp(request.getCode(), credential.getSecretData()))) {
+        UserCredentialModel input = new UserCredentialModel(credential.getId(), OTPCredentialModel.TYPE, code);
+        if (!user.credentialManager().isValid(input)) {
             throw new ApiException(Response.Status.BAD_REQUEST, "OTP code is invalid");
         }
         return Response.ok(new MessageResponse("OTP code is valid")).build();
@@ -101,14 +150,24 @@ public class TotpAdminResource {
 
     @POST
     @Path("totp/remove/{user-id}")
-    @Consumes(MediaType.APPLICATION_JSON)
-    public Response removeTotp(@PathParam("user-id") String userId, RemoveTotpRequest request) {
+    @Operation(summary = "Remove a TOTP credential by device label")
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Credential removed",
+            content = @Content(schema = @Schema(implementation = MessageResponse.class))),
+        @APIResponse(responseCode = "400", description = "Missing deviceName"),
+        @APIResponse(responseCode = "404", description = "User or credential not found")
+    })
+    public Response removeTotp(
+        @Parameter(description = "User id", required = true) @PathParam("user-id") String userId,
+        @Parameter(description = "Credential device label", required = true) @QueryParam("deviceName") String deviceName) {
         UserModel user = requireUser(realm, userId);
-        if (request == null || isBlank(request.getDeviceName())) {
+        if (isBlank(deviceName)) {
             throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
         }
 
-        CredentialModel credential = findByDeviceName(user, request.getDeviceName())
+        CredentialModel credential = findByDeviceName(user, deviceName)
             .orElseThrow(() -> new ApiException(Response.Status.NOT_FOUND, "TOTP credential not found for deviceName"));
         user.credentialManager().removeStoredCredentialById(credential.getId());
         return Response.ok(new MessageResponse("OTP credential removed")).build();
@@ -116,7 +175,16 @@ public class TotpAdminResource {
 
     @GET
     @Path("totp/list/{user-id}")
-    public TotpCredentialsResponse getCredentials(@PathParam("user-id") String userId) {
+    @Operation(summary = "List TOTP device labels for the user")
+    @APIResponses({
+        @APIResponse(
+            responseCode = "200",
+            description = "Device labels",
+            content = @Content(schema = @Schema(implementation = TotpCredentialsResponse.class))),
+        @APIResponse(responseCode = "404", description = "User not found")
+    })
+    public TotpCredentialsResponse getCredentials(
+        @Parameter(description = "User id", required = true) @PathParam("user-id") String userId) {
         UserModel user = requireUser(realm, userId);
 
         List<String> deviceNames = user.credentialManager()
@@ -146,18 +214,6 @@ public class TotpAdminResource {
         }
         if (isBlank(request.getInitialCode())) {
             throw new ApiException(Response.Status.BAD_REQUEST, "initialCode is required");
-        }
-    }
-
-    private void validateVerifyRequest(VerifyTotpRequest request) {
-        if (request == null) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "Request body is required");
-        }
-        if (isBlank(request.getDeviceName())) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "deviceName is required");
-        }
-        if (isBlank(request.getCode())) {
-            throw new ApiException(Response.Status.BAD_REQUEST, "code is required");
         }
     }
 

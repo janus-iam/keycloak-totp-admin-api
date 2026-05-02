@@ -10,9 +10,9 @@
 
 - [ ] Secure endpoints using `AdminPermissionEvaluator`  with `auth.realm().requireViewRequiredActions();`  or something like this
 
-- [ ] Add annotations like Keycloak officiap repo with :
-    - [ ] Consumes, Produces, QueryParam
-    - [ ] @QueryParam to replace `dto` subpackage
-    - [ ] Microprofile OpenAPI schema
+- [x] Add annotations like Keycloak official repo with :
+    - [x] Consumes, Produces, QueryParam
+    - [x] @QueryParam to replace `dto` subpackage ?
+    - [x] Microprofile OpenAPI schema
 
 - [ ] Migrate to Gradle

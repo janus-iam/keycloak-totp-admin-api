@@ -1,6 +1,7 @@
 package com.janus.keycloak.totpadmin;
 
-import com.janus.keycloak.totpadmin.dto.MessageResponse;
+import com.janus.keycloak.totpadmin.models.MessageResponse;
+
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
