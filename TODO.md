@@ -15,4 +15,6 @@
     - [x] @QueryParam to replace `dto` subpackage ?
     - [x] Microprofile OpenAPI schema
 
+- [ ] Add more deep unit tests
+
 - [ ] Migrate to Gradle
