@@ -38,7 +38,7 @@ mvn clean package
 
 Generated JAR:
 
-`target/keycloak-totp-admin-api-1.1.0-SNAPSHOT.jar`
+`target/keycloak-totp-admin-api-1.2.0-SNAPSHOT.jar`
 
 ## Local Docker Test Environment
 
