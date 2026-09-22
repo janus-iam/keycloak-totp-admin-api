@@ -26,8 +26,8 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.UserCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.credential.OTPCredentialModel.SecretEncoding;
-import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
-import org.keycloak.services.resources.admin.permissions.UserPermissionEvaluator;
+import org.keycloak.services.resources.admin.fgap.AdminPermissionEvaluator;
+import org.keycloak.services.resources.admin.fgap.UserPermissionEvaluator;
 
 import com.janus.keycloak.totpadmin.models.GenerateTotpResponse;
 import com.janus.keycloak.totpadmin.models.MessageResponse;
