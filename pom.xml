@@ -13,7 +13,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.release>17</maven.compiler.release>
-        <keycloak.version>26.1.5</keycloak.version>
+        <keycloak.version>26.7.4</keycloak.version>
         <zxing.version>3.5.3</zxing.version>
         <junit.version>5.11.4</junit.version>
         <microprofile-openapi.version>4.0.2</microprofile-openapi.version>
