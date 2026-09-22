@@ -1,0 +1,45 @@
+name: Keycloak compatibility matrix
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly run to catch breakage introduced by new Keycloak releases
+    # (the matrix pins patch versions, so bump them here when a new minor is published).
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-test:
+    name: Keycloak ${{ matrix.keycloak }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Keycloak >= 26.3 is required: the admin permission evaluators moved to
+        # org.keycloak.services.resources.admin.fgap in 26.3.0.
+        keycloak:
+          - "26.3.5"
+          - "26.4.7"
+          - "26.5.7"
+          - "26.6.4"
+          - "26.7.4"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Compile and run tests against Keycloak ${{ matrix.keycloak }}
+        run: mvn -B -Dkeycloak.version=${{ matrix.keycloak }} clean verify
