@@ -11,7 +11,7 @@
 
 - [x] Trigger the action to mark that the user has completed or removed any form of TOTP
 
-- [ ] Create a compatibility matrix tested by Github Actions
+- [x] Create a compatibility matrix tested by Github Actions
 
 - [ ] Suscribe to keycloak new version, test it and update the matrix
 

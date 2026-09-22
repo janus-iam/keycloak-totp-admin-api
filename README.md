@@ -14,6 +14,22 @@ All endpoints are available under:
 - `POST /remove/{user-id}`
 - `GET /list/{user-id}`
 
+## Compatibility
+
+The extension is built against the `keycloak.version` property declared in `pom.xml` and is compiled and tested
+against every supported Keycloak minor by the [compatibility matrix workflow](.github/workflows/compatibility.yml).
+
+| Keycloak | Status |
+|----------|--------|
+| 26.3.x, 26.4.x, 26.5.x, 26.6.x, 26.7.x | Supported (tested in CI) |
+| <= 26.2.x | Not supported: the admin permission evaluators lived in `org.keycloak.services.resources.admin.permissions` before 26.3.0 and were moved to `org.keycloak.services.resources.admin.fgap` |
+
+To build against a specific version:
+
+```bash
+mvn clean package -Dkeycloak.version=26.5.7
+```
+
 ## Build
 
 ```bash
@@ -22,7 +38,7 @@ mvn clean package
 
 Generated JAR:
 
-`target/keycloak-totp-admin-api-1.0.0-SNAPSHOT.jar`
+`target/keycloak-totp-admin-api-1.1.0-SNAPSHOT.jar`
 
 ## Local Docker Test Environment
 

@@ -16,8 +16,8 @@ import org.keycloak.models.UserModel;
 import org.keycloak.models.UserProvider;
 import org.keycloak.models.credential.OTPCredentialModel;
 import org.keycloak.models.utils.TimeBasedOTP;
-import org.keycloak.services.resources.admin.permissions.AdminPermissionEvaluator;
-import org.keycloak.services.resources.admin.permissions.UserPermissionEvaluator;
+import org.keycloak.services.resources.admin.fgap.AdminPermissionEvaluator;
+import org.keycloak.services.resources.admin.fgap.UserPermissionEvaluator;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
