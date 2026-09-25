@@ -40,6 +40,14 @@ Generated JAR:
 
 `target/keycloak-totp-admin-api-1.2.0-SNAPSHOT.jar`
 
+`mvn process-classes` also writes this extension's OpenAPI document to `target/openapi/openapi.yaml`. Append its paths and components onto a Keycloak Admin OpenAPI file with:
+
+```bash
+python3 scripts/merge-openapi.py admin-openapi.yaml target/openapi/openapi.yaml -o admin-with-totp.yaml
+```
+
+YAML inputs need PyYAML (`pip install pyyaml`). JSON works with the standard library. The script stops if a path or component name already exists with a different definition.
+
 ## Local Docker Test Environment
 
 Use the provided `docker-compose.yml` to run the official Keycloak image with this extension mounted in the providers folder.
