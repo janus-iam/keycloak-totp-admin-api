@@ -13,7 +13,7 @@
 
 - [x] Create a compatibility matrix tested by Github Actions
 
-- [ ] Suscribe to keycloak new version, test it and update the matrix
+- [x] Subscribe to Keycloak releases with Renovate, test the declared version in CI, and keep compatibility-matrix patches up to date
 
 - [ ] Implement tests with https://github.com/dasniko/testcontainers-keycloak ?
 

@@ -1,0 +1,48 @@
+{
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+  description: "Open pull requests when a new Keycloak release is published.",
+  extends: ["config:recommended"],
+  customManagers: [
+    {
+      customType: "regex",
+      description: "Keycloak versions pinned in the compatibility matrix",
+      // Each quoted x.y.z entry under matrix.keycloak.
+      managerFilePatterns: ["/^\\.github/workflows/compatibility\\.yml$/"],
+      matchStrings: ['-\\s+"(?<currentValue>\\d+\\.\\d+\\.\\d+)"'],
+      datasourceTemplate: "maven",
+      depNameTemplate: "org.keycloak:keycloak-services",
+      packageNameTemplate: "org.keycloak:keycloak-services",
+      versioningTemplate: "maven",
+    },
+  ],
+  packageRules: [
+    {
+      description: "Only open pull requests for Keycloak",
+      matchPackageNames: [
+        "!/^org\\.keycloak:keycloak-services$/",
+        "!/^quay\\.io\\/keycloak\\/keycloak$/",
+      ],
+      enabled: false,
+    },
+    {
+      description: "Follow the latest Keycloak release in Maven and the local image",
+      matchPackageNames: [
+        "org.keycloak:keycloak-services",
+        "quay.io/keycloak/keycloak",
+      ],
+      groupName: "Keycloak",
+      groupSlug: "keycloak",
+      commitMessageTopic: "Keycloak",
+      prBodyNotes: [
+        "If this pull request moves to a new Keycloak **minor**, add that version to `.github/workflows/compatibility.yml` and extend the supported range in `README.md`. Renovate keeps each existing matrix entry on its own minor and only proposes patch updates for those lines.",
+      ],
+    },
+    {
+      description: "Keep each compatibility-matrix minor on its latest patch",
+      matchFileNames: ["/^\\.github/workflows/compatibility\\.yml$/"],
+      matchPackageNames: ["org.keycloak:keycloak-services"],
+      // {{major}} and {{minor}} come from the version already pinned on that line.
+      allowedVersions: "/^{{major}}\\.{{minor}}\\.\\d+$/",
+    },
+  ],
+}

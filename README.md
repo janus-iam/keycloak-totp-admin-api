@@ -19,6 +19,8 @@ All endpoints are available under:
 The extension is built against the `keycloak.version` property declared in `pom.xml` and is compiled and tested
 against every supported Keycloak minor by the [compatibility matrix workflow](.github/workflows/compatibility.yml).
 
+[Renovate](https://docs.renovatebot.com/) (`renovate.json5`) opens a pull request when a new Keycloak release is published. It bumps `keycloak.version` and the `quay.io/keycloak/keycloak` image to that release, and it bumps each compatibility-matrix pin to the latest patch of the same minor. A new minor is not inserted into the matrix automatically. The workflow also tests whatever version `pom.xml` declares, so that pull request is compiled before the matrix is extended. Enable the [Renovate GitHub App](https://github.com/apps/renovate) on this repository.
+
 | Keycloak | Status |
 |----------|--------|
 | 26.3.x, 26.4.x, 26.5.x, 26.6.x, 26.7.x | Supported (tested in CI) |
