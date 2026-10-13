@@ -91,6 +91,29 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.5.2</version>
             </plugin>
+            <plugin>
+                <groupId>io.smallrye</groupId>
+                <artifactId>smallrye-open-api-maven-plugin</artifactId>
+                <version>3.6.2</version>
+                <executions>
+                    <execution>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>generate-schema</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <scanPackages>com.janus.keycloak.totpadmin</scanPackages>
+                    <scanResourceClasses>
+                        <com.janus.keycloak.totpadmin.TotpAdminResource>/admin/realms/{realm}/totp-admin-api</com.janus.keycloak.totpadmin.TotpAdminResource>
+                    </scanResourceClasses>
+                    <outputDirectory>${project.build.directory}/openapi</outputDirectory>
+                    <outputFileTypeFilter>ALL</outputFileTypeFilter>
+                    <infoTitle>Keycloak TOTP Admin API</infoTitle>
+                    <infoVersion>${project.version}</infoVersion>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
     <licenses>
